@@ -146,10 +146,15 @@ def call(a,b):
 			return JSObject('function',b)
 		if a.value=='Array' and b.kind=='string':
 			return JSObject('array',[b])
+		# potential bug: not distinguish f[] and f([])
+		if a.value=='String' and b.kind=='array' and b.value[0].kind=='string' and b.value[0].value=='fromCharCode':
+			return JSObject('function','fromCharCode')
 		if a.value=='Date':
 			return JSObject('string',default_date)#I'm too lazy to generate a real time
 		if a.value=='RegExp':
 			return JSObject('regexp','/(?:)/')
+		if a.value=='fromCharCode':
+			return JSObject('string',chr(int(b.value)))
 		if isinstance(a.value,tuple):
 			if a.value[0]=='return':
 				if a.value[1] in ('escape','unescape','italics','Date'):
