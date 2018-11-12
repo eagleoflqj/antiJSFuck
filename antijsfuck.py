@@ -1,8 +1,14 @@
 import math
 import re
+import time
 from urllib import parse
 
-defalut_date='Mon Nov 12 2018 15:54:05 GMT+0800'
+default_date='Mon Nov 12 2018 15:54:05 GMT+0800'
+def date(millisecond):
+	weekday,month,day,tm,year=time.ctime(millisecond/1000).split()
+	if int(day)<10:
+		day='0'+day
+	return ' '.join((weekday,month,day,year,tm,'GMT+0800'))
 class Node():
 	def __init__(self,kind,value,raw):
 		self.kind=kind
@@ -69,7 +75,7 @@ def o2string(o):
 	if o.kind=='object' and o.value=='this':
 		return '[object Window]'
 	if o.kind=='date':
-		return defalut_date
+		return date(o.value)
 	raise NotImplementedError(f'{o} to String failed')
 # a+b
 def add(a,b):
@@ -134,7 +140,7 @@ def call(a,b):
 				return JSObject('function',('return',return_value))
 			return JSObject('function',b)
 		if a.value=='Date':
-			return JSObject('string',defalut_date)#I'm too lazy to generate a real time
+			return JSObject('string',default_date)#I'm too lazy to generate a real time
 		if isinstance(a.value,tuple):
 			if a.value[0]=='return':
 				if a.value[1] in ('escape','unescape','italics','Date'):
