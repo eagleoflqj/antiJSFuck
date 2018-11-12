@@ -138,14 +138,20 @@ def call(a,b):
 			return JSObject('string',parse.quote(b.value))
 		if a.value=='unescape':
 			return JSObject('string',parse.unquote(b.value))
-		if a.value=='Function' and b.kind=='string':
-			m=re.match(r'return(\s\S.*|\/\S+)',b.value)
-			if m:
-				return_value=m.group(1).strip()
-				return JSObject('function',('return',return_value))
-			return JSObject('function',b)
-		if a.value=='Array' and b.kind=='string':
-			return JSObject('array',[b])
+		if a.value=='Function':
+			if b is None:
+				return JSObject('function',JSObject('string',''))
+			if b.kind=='string':
+				m=re.match(r'return(\s\S.*|\/\S+)',b.value)
+				if m:
+					return_value=m.group(1).strip()
+					return JSObject('function',('return',return_value))
+				return JSObject('function',b)
+		if a.value=='Array':
+			if b is None:
+				return JSObject('array',[])
+			if b.kind=='string':
+				return JSObject('array',[b])
 		# potential bug: not distinguish f[] and f([])
 		if a.value=='String' and b.kind=='array' and b.value[0].kind=='string' and b.value[0].value=='fromCharCode':
 			return JSObject('function','fromCharCode')
