@@ -76,9 +76,13 @@ def o2string(o):
 		return '[object Window]'
 	if o.kind=='date':
 		return date(o.value)
+	if o.kind=='regexp':
+		return o.value
 	raise NotImplementedError(f'{o} to String failed')
 # a+b
 def add(a,b):
+	to_stringer=('array','function')
+	to_stringee=('number','bool','undefined','array','object','date','regexp')
 	if a is None:
 		return b
 	if a.kind=='string' or b.kind=='string':
@@ -89,7 +93,7 @@ def add(a,b):
 		return JSObject('number',a.value+b.value)
 	if a.kind=='bool' and b.kind in ('bool','number') or a.kind=='number' and b.kind=='bool':
 		return JSObject('number',bool2number(a.value)+bool2number(b.value))
-	if a.kind in ('number','bool','undefined','array','object','date') and b.kind in('array','function') or a.kind in ('array','function') and b.kind in ('number','bool','undefined','array','object','date'):
+	if a.kind in to_stringee and b.kind in to_stringer or a.kind in to_stringer and b.kind in to_stringee:
 		return JSObject('string',o2string(a)+o2string(b))
 	raise NotImplementedError(f'{a} + {b} failed')
 # !
@@ -129,6 +133,7 @@ def call(a,b):
 			if b.value[0].value in ('italics','fontcolor'):
 				return JSObject('function',(b.value[0].value,a.value))
 	if a.kind=='function':
+		# f()
 		if a.value=='escape':
 			return JSObject('string',parse.quote(b.value))
 		if a.value=='unescape':
@@ -139,8 +144,12 @@ def call(a,b):
 				return_value=m.group(1).strip()
 				return JSObject('function',('return',return_value))
 			return JSObject('function',b)
+		if a.value=='Array' and b.kind=='string':
+			return JSObject('array',[b])
 		if a.value=='Date':
 			return JSObject('string',default_date)#I'm too lazy to generate a real time
+		if a.value=='RegExp':
+			return JSObject('regexp','/(?:)/')
 		if isinstance(a.value,tuple):
 			if a.value[0]=='return':
 				if a.value[1] in ('escape','unescape','italics','Date'):
@@ -148,22 +157,23 @@ def call(a,b):
 				if a.value[1]=='this':
 					return JSObject('object','this')
 				if a.value[1][0]=='/':
-					return JSObject('regexp',a.value[1][1:-1])
+					return JSObject('regexp',a.value[1])
 				m=re.match(r'new\s+Date\((\d+)\)',a.value[1])
 				if m:
-					return(JSObject('date',int(m.group(1))))
+					return JSObject('date',int(m.group(1)))
 			if a.value[0]=='italics':
 				return JSObject('string',f'<i>{a.value[1]}</i>')
 			if a.value[0]=='fontcolor':
 				return JSObject('string',f'<font color="undefined">{a.value[1]}</font>')
 			if a.value[0]=='concat' and b.kind=='array':
 				return JSObject('array',a.value[1].value+b.value)
-		if b is None:
+			if a.value[0]=='toString':
+				return JSObject('string',numberToString(a.value[1],int(b.value)))
+		if b is None and isinstance(a.value,JSObject) and a.value.kind=='string':
 			return JSCode(a.value.value)
-		if b.kind=='array' and b.value[0].value=='constructor':
+		# f.g
+		if isinstance(b,JSObject) and b.kind=='array' and b.value[0].value=='constructor':
 			return JSObject('function','Function')
-		if isinstance(a.value,tuple) and a.value[0]=='toString':
-			return JSObject('string',numberToString(a.value[1],int(b.value)))
 	if a.kind=='number' and b.kind=='array' and b.value[0].kind=='string' and b.value[0].value=='toString':
 		return JSObject('function',('toString',a.value))
 	if a.kind=='regexp' and b.kind=='array' and b.value[0].kind=='string' and b.value[0].value=='constructor':
