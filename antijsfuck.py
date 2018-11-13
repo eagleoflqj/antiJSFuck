@@ -34,8 +34,6 @@ def bool2number(b):
 		return 0
 	return b
 def array2string(a):
-	# if len(a)==0:
-	# 	return ''
 	return ','.join(o2string(x) for x in a)
 def bool2string(b):
 	if b is True:
@@ -70,7 +68,7 @@ def o2string(o):
 	if o.kind=='undefined':
 		return 'undefined'
 	if o.kind=='function':
-		if o.value in ('filter','String','Array','Boolean','RegExp','Number','Function'):
+		if o.value in ('filter','String','Array','Boolean','RegExp','Number','Function','fill'):
 			return 'function '+o.value+'() { [native code] }'
 	if o.kind=='object' and o.value=='this':
 		return '[object Window]'
@@ -124,6 +122,8 @@ def call(a,b):
 				return JSObject('function','Array')
 			if b.value[0].value=='concat':
 				return JSObject('function',('concat',a))
+			if b.value[0].value=='fill':
+				return JSObject('function','fill')
 	if a.kind=='string' and b.kind=='array':
 		if b.value[0].kind == 'number' or b.value[0].kind=='string' and re.match(r'\d+',b.value[0].value):
 			return JSObject('string',a.value[int(b.value[0].value)])
@@ -153,17 +153,22 @@ def call(a,b):
 			if b.kind=='string':
 				return JSObject('array',[b])
 		# potential bug: not distinguish f[] and f([])
-		if a.value=='String' and b.kind=='array' and b.value[0].kind=='string' and b.value[0].value=='fromCharCode':
-			return JSObject('function','fromCharCode')
+		if a.value=='String' and b.kind=='array' and b.value[0].kind=='string':
+			if b.value[0].value=='fromCharCode':
+				return JSObject('function','fromCharCode')
+			if b.value[0].value=='name':
+				return JSObject('string','String')
 		if a.value=='Date':
 			return JSObject('string',default_date)#I'm too lazy to generate a real time
 		if a.value=='RegExp':
 			return JSObject('regexp','/(?:)/')
 		if a.value=='fromCharCode':
 			return JSObject('string',chr(int(b.value)))
+		if a.value=='eval' and b.kind=='string':
+			return JSCode(b.value)
 		if isinstance(a.value,tuple):
 			if a.value[0]=='return':
-				if a.value[1] in ('escape','unescape','italics','Date'):
+				if a.value[1] in ('escape','unescape','italics','Date','eval'):
 					return JSObject('function',a.value[1])
 				if a.value[1]=='this':
 					return JSObject('object','this')
@@ -244,20 +249,6 @@ def evaluate(o):
 		return JSObject('array',[value] if value else [])
 	if o.kind=='(':
 		return evaluate(o.value)
-def tostr(o,depth=0):
-	s=str(depth)+' '
-	if isinstance(o,list):
-		s+='list\n'
-		for x in o:
-			s+=tostr(x,depth+1)+'\n'
-		return s.strip()
-	if isinstance(o,Node):
-		s+='Node '+o.kind
-		if isinstance(o.value,list):
-			s+='\n'+tostr(o.value,depth+1)
-	else:
-		s+=o
-	return s
 def fight(jsfuck_code):
 	# build simple AST
 	stack=[]
