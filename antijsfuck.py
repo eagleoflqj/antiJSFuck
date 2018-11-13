@@ -1,3 +1,4 @@
+import html
 import math
 import re
 import time
@@ -139,7 +140,7 @@ def call(a,b):
 		if b.value[0].kind == 'string':
 			if b.value[0].value=='constructor':
 				return JSObject('function','String')
-			if b.value[0].value in ('italics','fontcolor'):
+			if b.value[0].value in ('italics','fontcolor','link'):
 				return JSObject('function',(b.value[0].value,a.value))
 	if a.kind=='function':
 		# f()
@@ -196,6 +197,8 @@ def call(a,b):
 				return JSObject('array',a.value[1].value+b.value)
 			if a.value[0]=='toString':
 				return JSObject('string',numberToString(a.value[1],int(b.value)))
+			if a.value[0]=='link':
+				return JSObject('string',f'<a href="{html.escape(b.value)}">{a.value[1]}</a>')
 		if b is None and isinstance(a.value,JSObject) and a.value.kind=='string':
 			return JSCode(a.value.value)
 		# f.g
