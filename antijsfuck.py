@@ -74,8 +74,11 @@ def o2string(o):
 	if o.kind=='function':
 		if o.value in ('filter','String','Array','Boolean','RegExp','Number','Function','fill'):
 			return 'function '+o.value+'() { [native code] }'
-	if o.kind=='object' and o.value=='this':
-		return '[object Window]'
+	if o.kind=='object':
+		if o.value=='this':
+			return '[object Window]'
+		if o.value=='Array Iterator':
+			return '[object Array Iterator]'
 	if o.kind=='date':
 		return date(o.value)
 	if o.kind=='regexp':
@@ -128,6 +131,8 @@ def call(a,b):
 				return JSObject('function',('concat',a))
 			if b.value[0].value=='fill':
 				return JSObject('function','fill')
+			if b.value[0].value=='entries':
+				return JSObject('function','entries')
 	if a.kind=='string' and b.kind=='array':
 		if b.value[0].kind == 'number' or b.value[0].kind=='string' and re.match(r'\d+',b.value[0].value):
 			return JSObject('string',a.value[int(b.value[0].value)])
@@ -170,6 +175,8 @@ def call(a,b):
 			return JSObject('string',chr(int(b.value)))
 		if a.value=='eval' and b.kind=='string':
 			return JSCode(b.value)
+		if a.value=='entries':
+			return JSObject('object','Array Iterator')
 		if isinstance(a.value,tuple):
 			if a.value[0]=='return':
 				if a.value[1] in ('escape','unescape','italics','Date','eval'):
