@@ -21,7 +21,11 @@ class JSObject():
 		self.kind=kind
 		self.value=value
 	def __str__(self):
-		return f'JSObject {self.kind} {self.value}'
+		if isinstance(self.value,list):
+			value='['+','.join(str(x) for x in self.value)+']'
+		else:
+			value=self.value
+		return f'JSObject {self.kind} {value}'
 class JSCode():
 	def __init__(self,code):
 		self.code=code
