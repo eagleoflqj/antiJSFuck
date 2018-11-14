@@ -4,13 +4,19 @@ import execjs
 
 from antijsfuck import fight
 
-with open('jsfuck.js','r') as f:
-	jsfuck_code=f.read()
-context=execjs.get().compile(jsfuck_code)
-print('Testing printable ascii characters:')
-for c in string.printable:
-	fucked=context.call('jsfuck',c,1)
-	if c==fight(fucked):
-		print(ord(c),c,'passed')
-	else:
-		print(ord(c),c,'failed')
+for source in ('jsfuck','jsfuck_plus'):
+	with open(f'{source}.js','r') as f:
+		jsfuck_code=f.read()
+	context=execjs.get().compile(jsfuck_code)
+	print(f'Testing printable ASCII characters with {source}:')
+	for c in string.printable:
+		fucked=context.call(source,c,1,1)
+		result=c+' '
+		try:
+			if c==fight(fucked).code:
+				result+='passed'
+			else:
+				result+='failed'
+		except:
+			result+='crashed'
+		print(result,f'(ASCII {ord(c)})')

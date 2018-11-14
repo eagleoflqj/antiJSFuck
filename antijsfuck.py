@@ -214,8 +214,11 @@ def call(a, b):
 			return JSObject('RegExp', '/(?:)/')
 		if a.value == 'fromCharCode':
 			return JSObject('String', chr(int(b.value)))
-		if a.value == 'eval' and b.kind == 'String':
-			return JSCode(b.value)
+		if a.value == 'eval':
+			if b is None:
+				return JSCode('')
+			if b.kind == 'String':
+				return JSCode(b.value)
 		if a.value == 'entries':
 			return JSObject('Object', 'Array Iterator')
 		if isinstance(a.value, tuple):
@@ -349,4 +352,4 @@ def fight(jsfuck_code):
 				aux.append(None)
 		else:
 			raise Exception(f'not jsfuck character {c}')
-	return evaluate(stack).code
+	return evaluate(stack)
