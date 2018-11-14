@@ -109,6 +109,8 @@ def o2string(o: JSObject):
 			return '[object Window]'
 		if o.value == 'Array Iterator':
 			return '[object Array Iterator]'
+		if o.value == '{}':
+			return '[object Object]'
 	if o.kind == 'date':
 		return date(o.value)
 	if o.kind == 'regexp':
@@ -118,12 +120,10 @@ def o2string(o: JSObject):
 
 
 def add(a, b):
-	to_stringer = ('array', 'function')
-	to_stringee = ('number', 'bool', 'undefined',
-				   'array', 'object', 'date', 'regexp')
+	to_stringer = ('array', 'function', 'object', 'string')
 	if a is None:
 		return b
-	if a.kind == 'string' or b.kind == 'string':
+	if a.kind in to_stringer or b.kind in to_stringer:
 		return JSObject('string', o2string(a)+o2string(b))
 	if a.kind in ('number', 'bool') and b.kind == 'undefined' or a.kind == 'undefined' and b.kind in ('number', 'bool'):
 		return JSObject('number', math.nan)
@@ -131,8 +131,6 @@ def add(a, b):
 		return JSObject('number', a.value+b.value)
 	if a.kind == 'bool' and b.kind in ('bool', 'number') or a.kind == 'number' and b.kind == 'bool':
 		return JSObject('number', bool2number(a.value)+bool2number(b.value))
-	if a.kind in to_stringee and b.kind in to_stringer or a.kind in to_stringer and b.kind in to_stringee:
-		return JSObject('string', o2string(a)+o2string(b))
 	raise NotImplementedError(f'{a} + {b} failed')
 # !
 
@@ -183,7 +181,7 @@ def call(a, b):
 					return JSObject('function', (b.value[0].value, a))
 		if b.kind == 'function' and \
 				isinstance(b.value, tuple) and b.value[0] == 'slice' and b.value[1].kind == 'array':
-			return JSObject('array',[JSObject('string',x) for x in a.value])
+			return JSObject('array', [JSObject('string', x) for x in a.value])
 	if a.kind == 'function':
 		# f()
 		if a.value == 'escape':
@@ -194,7 +192,7 @@ def call(a, b):
 			if b is None:
 				return JSObject('function', JSObject('string', ''))
 			if b.kind == 'string':
-				m = re.match(r'return(\s\S.*|\/\S+)', b.value)
+				m = re.match(r'return(\s\S.*|[\/\{]\S+)', b.value)
 				if m:
 					return_value = m.group(1).strip()
 					return JSObject('function', ('return', return_value))
@@ -223,13 +221,16 @@ def call(a, b):
 			return JSObject('object', 'Array Iterator')
 		if isinstance(a.value, tuple):
 			if a.value[0] == 'return':
-				if a.value[1] in ('escape', 'unescape', 'italics', 'Date', 'eval'):
-					return JSObject('function', a.value[1])
-				if a.value[1] == 'this':
+				return_value = a.value[1]
+				if return_value in ('escape', 'unescape', 'italics', 'Date', 'eval'):
+					return JSObject('function', return_value)
+				if return_value == 'this':
 					return JSObject('object', 'this')
-				if a.value[1][0] == '/':
-					return JSObject('regexp', a.value[1])
-				m = re.match(r'new\s+Date\((\d+)\)', a.value[1])
+				if return_value[0] == '/':
+					return JSObject('regexp', return_value)
+				if return_value[0] == '{':
+					return JSObject('object', return_value)
+				m = re.match(r'new\s+Date\((\d+)\)', return_value)
 				if m:
 					return JSObject('date', int(m.group(1)))
 			if a.value[0] == 'italics':
