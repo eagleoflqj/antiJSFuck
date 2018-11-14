@@ -81,205 +81,195 @@ def numberToString(n, b):
 
 
 def int_like(o: JSObject):
-	if o.kind == 'number' and isinstance(o.value, int) or o.kind == 'string' and re.match(r'[\+\-]?\d+', o.value):
+	if o.kind == 'Number' and isinstance(o.value, int) or o.kind == 'String' and re.match(r'[\+\-]?\d+', o.value):
 		return True
 	return False
 
 
 def o2string(o: JSObject):
-	if o.kind == 'string':
+	if o.kind == 'String':
 		return o.value
-	if o.kind == 'number':
+	if o.kind == 'Number':
 		if math.isnan(o.value):
 			return 'NaN'
 		if o.value == math.inf:
 			return 'Infinity'
 		return str(o.value)
-	if o.kind == 'array':
+	if o.kind == 'Array':
 		return array2string(o.value)
-	if o.kind == 'bool':
+	if o.kind == 'Boolean':
 		return bool2string(o.value)
 	if o.kind == 'undefined':
 		return 'undefined'
-	if o.kind == 'function':
+	if o.kind == 'Function':
 		if o.value in ('filter', 'String', 'Array', 'Boolean', 'RegExp', 'Number', 'Function', 'fill'):
 			return 'function '+o.value+'() { [native code] }'
-	if o.kind == 'object':
+	if o.kind == 'Object':
 		if o.value == 'this':
 			return '[object Window]'
 		if o.value == 'Array Iterator':
 			return '[object Array Iterator]'
 		if o.value == '{}':
 			return '[object Object]'
-	if o.kind == 'date':
+	if o.kind == 'Date':
 		return date(o.value)
-	if o.kind == 'regexp':
+	if o.kind == 'RegExp':
 		return o.value
 	raise NotImplementedError(f'{o} to String failed')
 # a+b
 
 
 def add(a, b):
-	to_stringer = ('array', 'function', 'object', 'string')
+	to_stringer = ('Array', 'Function', 'Object', 'String', 'RegExp', 'Date')
 	if a is None:
 		return b
 	if a.kind in to_stringer or b.kind in to_stringer:
-		return JSObject('string', o2string(a)+o2string(b))
-	if a.kind in ('number', 'bool') and b.kind == 'undefined' or a.kind == 'undefined' and b.kind in ('number', 'bool'):
-		return JSObject('number', math.nan)
-	if a.kind == 'number' and b.kind == 'number':
-		return JSObject('number', a.value+b.value)
-	if a.kind == 'bool' and b.kind in ('bool', 'number') or a.kind == 'number' and b.kind == 'bool':
-		return JSObject('number', bool2number(a.value)+bool2number(b.value))
+		return JSObject('String', o2string(a)+o2string(b))
+	if a.kind in ('Number', 'Boolean') and b.kind == 'undefined' or a.kind == 'undefined' and b.kind in ('Number', 'Boolean'):
+		return JSObject('Number', math.nan)
+	if a.kind == 'Number' and b.kind == 'Number':
+		return JSObject('Number', a.value+b.value)
+	if a.kind == 'Boolean' and b.kind in ('Boolean', 'Number') or a.kind == 'Number' and b.kind == 'Boolean':
+		return JSObject('Number', bool2number(a.value)+bool2number(b.value))
 	raise NotImplementedError(f'{a} + {b} failed')
 # !
 
 
 def reverse(o: JSObject):
-	if o.kind == 'array':  # ![1]=false
-		return JSObject('bool', False)
-	if o.kind == 'bool':  # !false=true
-		return JSObject('bool', not o.value)
-	if o.kind == 'number':
+	if o.kind == 'Array':  # ![1]=false
+		return JSObject('Boolean', False)
+	if o.kind == 'Boolean':  # !false=true
+		return JSObject('Boolean', not o.value)
+	if o.kind == 'Number':
 		if o.value == 0 or math.isnan(o.value):  # !0=true,!NaN=true
-			return JSObject('bool', True)
-		return JSObject('bool', False)  # !1=false
+			return JSObject('Boolean', True)
+		return JSObject('Boolean', False)  # !1=false
 	raise NotImplementedError(f'! {o} failed')
 
 
 def call(a, b):
 	if a is None:
 		return b
-	if a.kind == 'bool' and b.kind == 'array' and b.value[0].kind == 'string' and b.value[0].value == 'constructor':
-		return JSObject('function', 'Boolean')
-	if a.kind == 'number' and b.kind == 'array' and b.value[0].kind == 'string' and b.value[0].value == 'constructor':
-		return JSObject('function', 'Number')
-	if a.kind == 'array'and b.kind == 'array':
-		if b.value[0].kind == 'array':
+	if isinstance(b, JSObject) and b.kind == 'Array' and b.value[0].kind == 'String':
+		if b.value[0].value == 'constructor':
+			return JSObject('Function', a.kind)
+	if a.kind == 'Array'and b.kind == 'Array':
+		if b.value[0].kind == 'Array':
 			return JSObject('undefined')
-		if b.value[0].kind == 'string':
+		if b.value[0].kind == 'String':
 			if b.value[0].value == 'filter':
-				return JSObject('function', 'filter')
-			if b.value[0].value == 'constructor':
-				return JSObject('function', 'Array')
+				return JSObject('Function', 'filter')
 			if b.value[0].value == 'concat':
-				return JSObject('function', ('concat', a))
+				return JSObject('Function', ('concat', a))
 			if b.value[0].value == 'fill':
-				return JSObject('function', 'fill')
+				return JSObject('Function', 'fill')
 			if b.value[0].value == 'entries':
-				return JSObject('function', 'entries')
+				return JSObject('Function', 'entries')
 			if b.value[0].value == 'slice':
-				return JSObject('function', ('slice', a))
-	if a.kind == 'string':
-		if b.kind == 'array':
+				return JSObject('Function', ('slice', a))
+	if a.kind == 'String':
+		if b.kind == 'Array':
 			if int_like(b.value[0]):
-				return JSObject('string', a.value[int(b.value[0].value)])
-			if b.value[0].kind == 'string':
-				if b.value[0].value == 'constructor':
-					return JSObject('function', 'String')
+				return JSObject('String', a.value[int(b.value[0].value)])
+			if b.value[0].kind == 'String':
 				if b.value[0].value in ('italics', 'fontcolor', 'link', 'slice'):
-					return JSObject('function', (b.value[0].value, a))
-		if b.kind == 'function' and \
-				isinstance(b.value, tuple) and b.value[0] == 'slice' and b.value[1].kind == 'array':
-			return JSObject('array', [JSObject('string', x) for x in a.value])
-	if a.kind == 'function':
+					return JSObject('Function', (b.value[0].value, a))
+		if b.kind == 'Function' and \
+				isinstance(b.value, tuple) and b.value[0] == 'slice' and b.value[1].kind == 'Array':
+			return JSObject('Array', [JSObject('String', x) for x in a.value])
+	if a.kind == 'Function':
 		# f()
 		if a.value == 'escape':
-			return JSObject('string', parse.quote(o2string(b)))
+			return JSObject('String', parse.quote(o2string(b)))
 		if a.value == 'unescape':
-			return JSObject('string', parse.unquote(b.value))
+			return JSObject('String', parse.unquote(b.value))
 		if a.value == 'Function':
 			if b is None:
-				return JSObject('function', JSObject('string', ''))
-			if b.kind == 'string':
+				return JSObject('Function', JSObject('String', ''))
+			if b.kind == 'String':
 				m = re.match(r'return(\s\S.*|[\/\{]\S+)', b.value)
 				if m:
 					return_value = m.group(1).strip()
-					return JSObject('function', ('return', return_value))
-				return JSObject('function', b)
+					return JSObject('Function', ('return', return_value))
+				return JSObject('Function', b)
 		if a.value == 'Array':
 			if b is None:
-				return JSObject('array', [])
-			if b.kind == 'string':
-				return JSObject('array', [b])
+				return JSObject('Array', [])
+			if b.kind == 'String':
+				return JSObject('Array', [b])
 		# potential bug: not distinguish f[] and f([])
-		if a.value == 'String' and b.kind == 'array' and b.value[0].kind == 'string':
+		if a.value == 'String' and b.kind == 'Array' and b.value[0].kind == 'String':
 			if b.value[0].value == 'fromCharCode':
-				return JSObject('function', 'fromCharCode')
+				return JSObject('Function', 'fromCharCode')
 			if b.value[0].value == 'name':
-				return JSObject('string', 'String')
+				return JSObject('String', 'String')
 		if a.value == 'Date':
 			# I'm too lazy to generate a real time
-			return JSObject('string', default_date)
+			return JSObject('String', default_date)
 		if a.value == 'RegExp':
-			return JSObject('regexp', '/(?:)/')
+			return JSObject('RegExp', '/(?:)/')
 		if a.value == 'fromCharCode':
-			return JSObject('string', chr(int(b.value)))
-		if a.value == 'eval' and b.kind == 'string':
+			return JSObject('String', chr(int(b.value)))
+		if a.value == 'eval' and b.kind == 'String':
 			return JSCode(b.value)
 		if a.value == 'entries':
-			return JSObject('object', 'Array Iterator')
+			return JSObject('Object', 'Array Iterator')
 		if isinstance(a.value, tuple):
 			if a.value[0] == 'return':
 				return_value = a.value[1]
 				if return_value in ('escape', 'unescape', 'italics', 'Date', 'eval'):
-					return JSObject('function', return_value)
+					return JSObject('Function', return_value)
 				if return_value == 'this':
-					return JSObject('object', 'this')
+					return JSObject('Object', 'this')
 				if return_value[0] == '/':
-					return JSObject('regexp', return_value)
+					return JSObject('RegExp', return_value)
 				if return_value[0] == '{':
-					return JSObject('object', return_value)
+					return JSObject('Object', return_value)
 				m = re.match(r'new\s+Date\((\d+)\)', return_value)
 				if m:
-					return JSObject('date', int(m.group(1)))
+					return JSObject('Date', int(m.group(1)))
 			if a.value[0] == 'italics':
-				return JSObject('string', f'<i>{a.value[1].value}</i>')
+				return JSObject('String', f'<i>{a.value[1].value}</i>')
 			if a.value[0] == 'fontcolor':
-				return JSObject('string', f'<font color="undefined">{a.value[1].value}</font>')
-			if a.value[0] == 'concat' and b.kind == 'array':
-				return JSObject('array', a.value[1].value+b.value)
+				return JSObject('String', f'<font color="undefined">{a.value[1].value}</font>')
+			if a.value[0] == 'concat' and b.kind == 'Array':
+				return JSObject('Array', a.value[1].value+b.value)
 			if a.value[0] == 'toString':
-				return JSObject('string', numberToString(a.value[1], int(b.value)))
+				return JSObject('String', numberToString(a.value[1], int(b.value)))
 			if a.value[0] == 'link':
-				return JSObject('string', f'<a href="{html.escape(b.value)}">{a.value[1].value}</a>')
+				return JSObject('String', f'<a href="{html.escape(b.value)}">{a.value[1].value}</a>')
 			if a.value[0] == 'slice' and int_like(b):
-				return JSObject('string', a.value[1].value[int(b.value)])
+				return JSObject('String', a.value[1].value[int(b.value)])
 			if a.value[0] == 'call':
 				return call(b, a.value[1])
-		if b is None and isinstance(a.value, JSObject) and a.value.kind == 'string':
+		if b is None and isinstance(a.value, JSObject) and a.value.kind == 'String':
 			return JSCode(a.value.value)
 		# f.g
-		if isinstance(b, JSObject) and b.kind == 'array':
-			if b.value[0].value == 'constructor':
-				return JSObject('function', 'Function')
+		if isinstance(b, JSObject) and b.kind == 'Array':
 			if b.value[0].value == 'call':
-				return JSObject('function', ('call', a))
-	if a.kind == 'number' and b.kind == 'array' and b.value[0].kind == 'string' and b.value[0].value == 'toString':
-		return JSObject('function', ('toString', a.value))
-	if a.kind == 'regexp' and b.kind == 'array' and b.value[0].kind == 'string' and b.value[0].value == 'constructor':
-		return JSObject('function', 'RegExp')
-	print(int_like(b))
+				return JSObject('Function', ('call', a))
+	if a.kind == 'Number' and b.kind == 'Array' and b.value[0].kind == 'String' and b.value[0].value == 'toString':
+		return JSObject('Function', ('toString', a.value))
 	raise NotImplementedError(f'{a} call {b} failed')
 # +
 
 
 def positive(o):
-	if o.kind == 'array':
+	if o.kind == 'Array':
 		if len(o.value) == 0:  # +[]=0
-			return JSObject('number', 0)
-		if o.value[0].kind == 'number':  # +[1]=1
-			return JSObject('number', o.value[0].value)
-		if o.value[0].kind == 'bool':  # +[true]=NaN
-			return JSObject('number', math.nan)
-	if o.kind == 'bool':  # +false=0
-		return JSObject('number', bool2number(o.value))
-	if o.kind == 'string':  # +"1"=1
+			return JSObject('Number', 0)
+		if o.value[0].kind == 'Number':  # +[1]=1
+			return JSObject('Number', o.value[0].value)
+		if o.value[0].kind == 'Boolean':  # +[true]=NaN
+			return JSObject('Number', math.nan)
+	if o.kind == 'Boolean':  # +false=0
+		return JSObject('Number', bool2number(o.value))
+	if o.kind == 'String':  # +"1"=1
 		try:
 			value = int(o.value)
 		except:
 			value = float(o.value)
-		return JSObject('number', value)
+		return JSObject('Number', value)
 	raise NotImplementedError(f'+ {o} failed')
 
 
@@ -320,7 +310,7 @@ def evaluate(o):
 		raise Exception()
 	if o.kind == '[':
 		value = evaluate(o.value)
-		return JSObject('array', [value] if value else [])
+		return JSObject('Array', [value] if value else [])
 	if o.kind == '(':
 		return evaluate(o.value)
 
