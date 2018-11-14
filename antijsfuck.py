@@ -86,7 +86,7 @@ def int_like(o: JSObject):
 	return False
 
 
-def o2string(o: JSObject):
+def o2string(o: JSObject, base=None):
 	if o.kind == 'String':
 		return o.value
 	if o.kind == 'Number':
@@ -94,7 +94,9 @@ def o2string(o: JSObject):
 			return 'NaN'
 		if o.value == math.inf:
 			return 'Infinity'
-		return str(o.value)
+		if base is None:
+			return str(o.value)
+		return numberToString(o.value, base)
 	if o.kind == 'Array':
 		return array2string(o.value)
 	if o.kind == 'Boolean':
@@ -153,6 +155,8 @@ def call(a, b):
 	if isinstance(b, JSObject) and b.kind == 'Array' and b.value[0].kind == 'String':
 		if b.value[0].value == 'constructor':
 			return JSObject('Function', a.kind)
+		if b.value[0].value == 'toString':
+			return JSObject('Function', ('toString', a))
 	if a.kind == 'Array'and b.kind == 'Array':
 		if b.value[0].kind == 'Array':
 			return JSObject('undefined')
@@ -235,7 +239,7 @@ def call(a, b):
 			if a.value[0] == 'concat' and b.kind == 'Array':
 				return JSObject('Array', a.value[1].value+b.value)
 			if a.value[0] == 'toString':
-				return JSObject('String', numberToString(a.value[1], int(b.value)))
+				return JSObject('String', o2string(a.value[1], int(b.value) if b else None))
 			if a.value[0] == 'link':
 				return JSObject('String', f'<a href="{html.escape(b.value)}">{a.value[1].value}</a>')
 			if a.value[0] == 'slice' and int_like(b):
