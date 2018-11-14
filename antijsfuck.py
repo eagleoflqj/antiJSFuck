@@ -150,14 +150,14 @@ def reverse(o: JSObject):
 
 
 def call(a, b):
-	if a is None:
-		return b
+	if a is None and b.kind == 'Function' and isinstance(b.value, tuple) and b.value[0] == 'toString':
+		return JSObject('String', '[object Undefined]')
 	if isinstance(b, JSObject) and b.kind == 'Array' and b.value[0].kind == 'String':
 		if b.value[0].value == 'constructor':
 			return JSObject('Function', a.kind)
 		if b.value[0].value == 'toString':
 			return JSObject('Function', ('toString', a))
-	if a.kind == 'Array'and b.kind == 'Array':
+	if a.kind == 'Array' and b.kind == 'Array':
 		if b.value[0].kind == 'Array':
 			return JSObject('undefined')
 		if b.value[0].kind == 'String':
@@ -239,7 +239,10 @@ def call(a, b):
 			if a.value[0] == 'concat' and b.kind == 'Array':
 				return JSObject('Array', a.value[1].value+b.value)
 			if a.value[0] == 'toString':
-				return JSObject('String', o2string(a.value[1], int(b.value) if b else None))
+				if b is None:
+					return JSObject('String', o2string(a.value[1]))
+				if int_like(b):
+					return JSObject('String', o2string(a.value[1], int(b.value)))
 			if a.value[0] == 'link':
 				return JSObject('String', f'<a href="{html.escape(b.value)}">{a.value[1].value}</a>')
 			if a.value[0] == 'slice' and int_like(b):
@@ -252,8 +255,6 @@ def call(a, b):
 		if isinstance(b, JSObject) and b.kind == 'Array':
 			if b.value[0].value == 'call':
 				return JSObject('Function', ('call', a))
-	if a.kind == 'Number' and b.kind == 'Array' and b.value[0].kind == 'String' and b.value[0].value == 'toString':
-		return JSObject('Function', ('toString', a.value))
 	raise NotImplementedError(f'{a} call {b} failed')
 # +
 
@@ -282,9 +283,10 @@ def evaluate_term(o):
 		return reverse(evaluate_term(o[1:]))
 	if o[0] == '+':
 		return positive(evaluate_term(o[1:]))
-	result = None
-	for item in o:
-		result = call(result, evaluate(item))
+	evaluated = [evaluate(item) for item in o]
+	result = evaluated[0]
+	for item in evaluated[1:]:
+		result = call(result, item)
 	return result
 
 
