@@ -2,7 +2,7 @@
 get jsfucked js code back with python
 ## requirements
 nothing special for antijsfuck.py  
-execjs for test.py
+execjs, parameterized and requests for test.py
 ## usage
 ```python
 from antijsfuck import fight
@@ -18,8 +18,5 @@ jsfuck_code='[][(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+(![]+[])[!+[]+!+[]]+(!
 print(fight(jsfuck_code).code)
 ```
 ## test
-There's a test for single printable ASCII code in test.py,  
-all pass except ASCII 10 ('\n', LF) which is a bug that jsfuck has.
-## references
-jsfuck.js is adapted from [jsfuck](http://www.jsfuck.com/)  
-jsfuck_plus.js is adapted from [bugku](http://www.bugku.com/tools/jsfuck/)
+There's a test for all cases provided by [jsfuck](https://github.com/aemkei/jsfuck).  
+All passed.
